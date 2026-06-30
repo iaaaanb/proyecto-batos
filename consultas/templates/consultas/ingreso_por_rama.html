@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Ingreso por rama económica — CASEN 2024</title>
+</head>
+<body>
+    <h1>Ingreso promedio por rama económica</h1>
+
+    <form method="get">
+        <label for="region">Región:</label>
+        <select name="region" id="region">
+            <option value="">— Elige una región —</option>
+            {% for r in regiones %}
+            <option value="{{ r.cod_region }}"
+                {% if seleccion == r.cod_region|stringformat:"s" %}selected{% endif %}>
+                {{ r.nombre }}
+            </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Consultar</button>
+    </form>
+
+    {% if error %}<p style="color:red">{{ error }}</p>{% endif %}
+
+    {% if region_nombre %}
+        <h2>{{ region_nombre }} — ingreso mensual de ocupados (ponderado)</h2>
+        {% if filas %}
+        <table border="1" cellpadding="6">
+            <thead>
+                <tr><th>Rama económica</th><th>Ingreso promedio ($)</th><th>n (muestra)</th></tr>
+            </thead>
+            <tbody>
+                {% for fila in filas %}
+                <tr>
+                    <td>{{ fila.rama }}</td>
+                    <td>{{ fila.ingreso_promedio }}</td>
+                    <td>{{ fila.n_muestra }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p>Sin datos para esa región.</p>
+        {% endif %}
+    {% endif %}
+</body>
+</html>

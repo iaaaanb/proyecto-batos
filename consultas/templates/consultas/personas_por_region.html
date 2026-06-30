@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Personas por región — CASEN 2024</title>
+</head>
+<body>
+    <h1>Personas por región</h1>
+    <table border="1" cellpadding="6">
+        <thead>
+            <tr><th>Región</th><th>Personas</th></tr>
+        </thead>
+        <tbody>
+            {% for fila in filas %}
+            <tr>
+                <td>{{ fila.region }}</td>
+                <td>{{ fila.personas }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

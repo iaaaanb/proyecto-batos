@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Brecha salarial por sexo — CASEN 2024</title>
+</head>
+<body>
+    <h1>Brecha salarial por sexo, según nivel educacional</h1>
+
+    <form method="get">
+        <label for="region">Región (opcional):</label>
+        <select name="region" id="region">
+            <option value="">— Todo el país —</option>
+            {% for r in regiones %}
+            <option value="{{ r.cod_region }}"
+                {% if seleccion == r.cod_region|stringformat:"s" %}selected{% endif %}>
+                {{ r.nombre }}
+            </option>
+            {% endfor %}
+        </select>
+        <button type="submit">Consultar</button>
+    </form>
+
+    {% if error %}<p style="color:red">{{ error }}</p>{% endif %}
+
+    <h2>{% if region_nombre %}{{ region_nombre }}{% else %}Todo el país{% endif %} — ingreso mensual de ocupados (ponderado)</h2>
+    <table border="1" cellpadding="6">
+        <thead>
+            <tr>
+                <th>Nivel educacional</th>
+                <th>Hombres ($)</th>
+                <th>Mujeres ($)</th>
+                <th>Mujer/Hombre (%)</th>
+                <th>n (H / M)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in filas %}
+            <tr>
+                <td>{{ fila.nivel }}</td>
+                <td>{{ fila.ingreso_hombres|default:"—" }}</td>
+                <td>{{ fila.ingreso_mujeres|default:"—" }}</td>
+                <td>{{ fila.razon|default:"—" }}</td>
+                <td>{{ fila.n_hombres }} / {{ fila.n_mujeres }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
