@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Indicadores por región — CASEN 2024</title></head>
+<body>
+    <p><a href="{% url 'consultas:inicio' %}">&larr; Inicio</a></p>
+    <h1>Indicadores laborales por región</h1>
+    <p>Ingreso de ocupados (ponderado). Tasas sobre población de 15 años y más.</p>
+    <table border="1" cellpadding="6">
+        <thead><tr>
+            <th>Región</th><th>Ingreso prom.</th><th>Ingreso mediano</th>
+            <th>Tasa ocupación %</th><th>Tasa participación %</th><th>% educ. superior</th>
+        </tr></thead>
+        <tbody>
+        {% for f in filas %}
+            <tr>
+                <td>{{ f.region }}</td>
+                <td>{{ f.ingreso_promedio }}</td>
+                <td>{{ f.ingreso_mediano }}</td>
+                <td>{{ f.tasa_ocupacion }}</td>
+                <td>{{ f.tasa_participacion }}</td>
+                <td>{{ f.pct_educacion_superior }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

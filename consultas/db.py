@@ -1,75 +1,57 @@
+"""Acceso a datos. Todo el SQL vive aquí.
+Lectura por la conexión 'readonly' (webuser, solo SELECT).
+Parámetros con %s = sentencias preparadas, seguras contra inyección.
+Tablas y vistas calificadas con esquema public.
+"""
 from django.db import connections
 
 
 def _consultar(sql, params=None):
-
     with connections["readonly"].cursor() as cursor:
         cursor.execute(sql, params or [])
-        columnas = [col[0] for col in cursor.description]
-        return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+        cols = [c[0] for c in cursor.description]
+        return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
 
-def personas_por_region():
+# --- Consulta 1: distribución de ingreso por rama (vista materializada) ---
+def distribucion_ingreso_rama():
+    return _consultar("""
+        SELECT rama, n_muestra, ingreso_promedio, p25, mediana, p75
+        FROM public.mv_ingreso_rama
+        ORDER BY ingreso_promedio DESC;
+    """)
 
-    sql = """
-        SELECT r.nombre AS region,
-               COUNT(*)  AS personas
-        FROM public.persona   p
-        JOIN public.hogar     h  ON p.folio        = h.folio
-        JOIN public.comuna    c  ON h.cod_comuna   = c.cod_comuna
-        JOIN public.provincia pr ON c.cod_provincia = pr.cod_provincia
-        JOIN public.region    r  ON pr.cod_region  = r.cod_region
-        GROUP BY r.nombre
-        ORDER BY personas DESC;
-    """
-    return _consultar(sql)
 
+# --- Consulta 2: indicadores por región (vista materializada) ---
+def indicadores_region():
+    return _consultar("""
+        SELECT region, ingreso_promedio, ingreso_mediano,
+               tasa_ocupacion, tasa_participacion, pct_educacion_superior
+        FROM public.mv_indicadores_region
+        ORDER BY ingreso_promedio DESC;
+    """)
+
+
+# --- Para el menú desplegable de la consulta 3 ---
 def listar_regiones():
-
     return _consultar(
         "SELECT cod_region, nombre FROM public.region ORDER BY nombre;"
     )
 
 
-def ingreso_por_rama_en_region(cod_region):
-
-    sql = """
-        SELECT re.descripcion AS rama,
-               ROUND( (SUM(p.yoprcor * h.expr) / SUM(h.expr))::numeric ) AS ingreso_promedio,
-               COUNT(*) AS n_muestra
-        FROM public.persona           p
-        JOIN public.hogar             h   ON p.folio          = h.folio
-        JOIN public.comuna            c   ON h.cod_comuna     = c.cod_comuna
-        JOIN public.provincia         pr  ON c.cod_provincia  = pr.cod_provincia
-        JOIN public.subrama_economica sre ON p.codigo_subrama = sre.codigo
-        JOIN public.rama_economica    re  ON sre.codigo_rama  = re.codigo
-        WHERE pr.cod_region = %s
-          AND p.activ = 1
-          AND p.yoprcor IS NOT NULL
-        GROUP BY re.descripcion
-        ORDER BY ingreso_promedio DESC;
-    """
-    return _consultar(sql, [cod_region])
-
-def brecha_salarial_por_nivel(cod_region=None):
-
-    sql = """
+# --- Consulta 3: brecha salarial por sexo en una región (vista normal + índice) ---
+def brecha_sexo_region(cod_region):
+    return _consultar("""
         SELECT ne.descripcion AS nivel,
-               ROUND( (SUM(p.yoprcor * h.expr) FILTER (WHERE p.sexo = 1)
-                     / NULLIF(SUM(h.expr)      FILTER (WHERE p.sexo = 1), 0))::numeric ) AS ingreso_hombres,
-               ROUND( (SUM(p.yoprcor * h.expr) FILTER (WHERE p.sexo = 2)
-                     / NULLIF(SUM(h.expr)      FILTER (WHERE p.sexo = 2), 0))::numeric ) AS ingreso_mujeres,
-               COUNT(*) FILTER (WHERE p.sexo = 1) AS n_hombres,
-               COUNT(*) FILTER (WHERE p.sexo = 2) AS n_mujeres
-        FROM public.persona           p
-        JOIN public.hogar             h  ON p.folio       = h.folio
-        JOIN public.comuna            c  ON h.cod_comuna  = c.cod_comuna
-        JOIN public.provincia         pr ON c.cod_provincia = pr.cod_provincia
-        JOIN public.nivel_educacional ne ON p.codigo_nivel = ne.codigo
-        WHERE p.activ = 1
-          AND p.yoprcor IS NOT NULL
-          AND (%s IS NULL OR pr.cod_region = %s)
+               ROUND((SUM(g.yoprcor*g.expr) FILTER (WHERE g.sexo=1)
+                    / NULLIF(SUM(g.expr)    FILTER (WHERE g.sexo=1),0))::numeric) AS ing_hombres,
+               ROUND((SUM(g.yoprcor*g.expr) FILTER (WHERE g.sexo=2)
+                    / NULLIF(SUM(g.expr)    FILTER (WHERE g.sexo=2),0))::numeric) AS ing_mujeres,
+               COUNT(*) FILTER (WHERE g.sexo=1) AS n_h,
+               COUNT(*) FILTER (WHERE g.sexo=2) AS n_m
+        FROM public.v_persona_geo g
+        JOIN public.nivel_educacional ne ON g.codigo_nivel = ne.codigo
+        WHERE g.cod_region = %s AND g.activ = 1 AND g.yoprcor IS NOT NULL
         GROUP BY ne.codigo, ne.descripcion
         ORDER BY ne.codigo;
-    """
-    return _consultar(sql, [cod_region, cod_region])
+    """, [cod_region])

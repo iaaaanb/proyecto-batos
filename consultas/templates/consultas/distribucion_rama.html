@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Ingreso por rama — CASEN 2024</title></head>
+<body>
+    <p><a href="{% url 'consultas:inicio' %}">&larr; Inicio</a></p>
+    <h1>Distribución de ingreso por rama económica</h1>
+    <p>Ocupados, ingreso mensual. Promedio ponderado por factor de expansión; percentiles sobre la muestra.</p>
+    <table border="1" cellpadding="6">
+        <thead><tr>
+            <th>Rama</th><th>Promedio</th><th>P25</th><th>Mediana</th><th>P75</th><th>n</th>
+        </tr></thead>
+        <tbody>
+        {% for f in filas %}
+            <tr>
+                <td>{{ f.rama }}</td>
+                <td>{{ f.ingreso_promedio }}</td>
+                <td>{{ f.p25 }}</td>
+                <td>{{ f.mediana }}</td>
+                <td>{{ f.p75 }}</td>
+                <td>{{ f.n_muestra }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
