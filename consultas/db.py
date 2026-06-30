@@ -13,14 +13,33 @@ def _consultar(sql, params=None):
         return [dict(zip(cols, row)) for row in cursor.fetchall()]
 
 
-# --- Consulta 1: distribución de ingreso por rama (vista materializada) ---
+# --- Consulta 1: distribución de ingreso por rama ---
 def distribucion_ingreso_rama():
+    """Sin parámetro: lee la vista materializada (nacional)."""
     return _consultar("""
         SELECT rama, n_muestra, ingreso_promedio, p25, mediana, p75
         FROM public.mv_ingreso_rama
         ORDER BY ingreso_promedio DESC;
     """)
 
+
+def distribucion_ingreso_rama_region(cod_region):
+    """Con parámetro: misma distribución pero filtrada a una región.
+    Usa v_persona_geo (que filtra por cod_region vía el índice de hogar)."""
+    return _consultar("""
+        SELECT r.descripcion AS rama,
+               COUNT(*)       AS n_muestra,
+               ROUND((SUM(g.yoprcor * g.expr) / SUM(g.expr))::numeric)                   AS ingreso_promedio,
+               ROUND((percentile_cont(0.25) WITHIN GROUP (ORDER BY g.yoprcor))::numeric) AS p25,
+               ROUND((percentile_cont(0.50) WITHIN GROUP (ORDER BY g.yoprcor))::numeric) AS mediana,
+               ROUND((percentile_cont(0.75) WITHIN GROUP (ORDER BY g.yoprcor))::numeric) AS p75
+        FROM public.v_persona_geo g
+        JOIN public.subrama_economica s ON g.codigo_subrama = s.codigo
+        JOIN public.rama_economica r    ON s.codigo_rama = r.codigo
+        WHERE g.cod_region = %s AND g.activ = 1 AND g.yoprcor IS NOT NULL
+        GROUP BY r.descripcion
+        ORDER BY ingreso_promedio DESC;
+    """, [cod_region])
 
 # --- Consulta 2: indicadores por región (vista materializada) ---
 def indicadores_region():
